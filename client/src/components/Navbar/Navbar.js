@@ -1,12 +1,35 @@
-import React from 'react'
-import { Link } from "react-router-dom";
+import React , {useState,useEffect} from 'react'
+import { Link , useNavigate , useLocation } from "react-router-dom";
 import { AppBar , Toolbar, Typography , Avatar , Button} from '@material-ui/core'
 import useStyles from './styles';
+import { useDispatch } from "react-redux";
 import memories from '../../images/memories.png'
+import jwtDecode from "jwt-decode";
 
 const Navbar = () => {
   const classes  = useStyles() ;
-  const user = null ;
+  const dispatch = useDispatch() ;
+  const navigate = useNavigate() ;
+  const location = useLocation() ;
+  const [user,setUser] =  useState(JSON.parse(localStorage.getItem('profile')));
+  //console.log(user);
+
+  const logout =()=>{
+    dispatch({type : 'LOGOUT'});
+    navigate('/');
+    setUser(null);
+  }
+     
+  useEffect(() => {
+    const token = user?.token ;
+    // JWT ...
+    if(token){
+      const decodedToken = jwtDecode(token);
+      if(decodedToken.exp * 100 < new Date().getTime()) logout() ;
+    }
+    setUser(JSON.parse(localStorage.getItem('profile')));
+  },[location])
+  
   return (
 <AppBar className={classes.appBar} position="static" color="inherit">
     <div className={classes.brandContainer}>
@@ -30,6 +53,7 @@ const Navbar = () => {
               variant="contained"
               className={classes.logout}
               color="secondary"
+              onClick={logout}
             >
               logout
             </Button>

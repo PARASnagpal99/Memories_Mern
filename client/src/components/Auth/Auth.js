@@ -1,50 +1,159 @@
-import React , {useState} from 'react'
-import {Avatar  , Paper , Grid , Typography , Container} from '@material-ui/core'
-import LockOutlinedIcon from '@material-ui/icons/LockOutlined'
-import useStyles from './styles'
-import Input from './input'
+import React, { useState } from "react";
+import Input from "./Input";
+import useStyles from "./styles";
+import { LockOutlined } from "@material-ui/icons";
+import {
+  Avatar,
+  Button,
+  CircularProgress,
+  Container,
+  Grid,
+  Paper,
+  Typography,
+} from "@material-ui/core";
+import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
+import { signin, signup } from "../../actions/auth";
+import jwtDecode from "jwt-decode";
+import { GoogleLogin } from "@react-oauth/google";
+
+const intialState = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
+};
+
 const Auth = () => {
-  const classes = useStyles() ;
-  const isSignup = false ;
-  const [showPassword , setShowPassword] = useState(false);
-  const handleShowPassword =()=>{
-        setShowPassword((prevShowPassword)=>!prevShowPassword)
-  }
-  const handleSubmit = ()=>{
+  const classes = useStyles();
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [formData, setFormData] = useState(intialState);
+  const { isLoading, showAlert, message } = useSelector((store) => store.auth);
 
+  // const isSignUp = true;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    //here we can see the user data
+    // console.log(formData);
+    if (isSignUp) {
+      dispatch(signup(formData, navigate));
+    } else {
+      dispatch(signin(formData, navigate));
+    }
   };
- 
-  const handleChange =()=>{
-        
+  
+  const handleChange = (e) => {
+    e.preventDefault();
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleShowPassword = () => {
+    setShowPassword((prevShowPassword) => !prevShowPassword);
+  };
 
-  return (
-    <Container component="main" maxWidth="xs">
-       <Paper className={classes.paper} elevation={3}>
-              <Avatar className={classes.avatar}>
-                   <LockOutlinedIcon/>
-              </Avatar>
-              <Typography variant='h5'>
-                {isSignup ? 'Sign Up' : 'Sign In'}
-              </Typography>
-              <form className={classes.form} onSubmit={handleSubmit}>
-                  <Grid container spacing={2}>
-                     {
-                        isSignup && (
-                          <>
-                            <Input name='firstName' label="First Name" handleChange={handleChange} autoFocus/>
-                            <Input name='firstName' label="First Name" handleChange={handleChange} half/>
-                          </>
-                        )
-                     }
-                    <Input name='email' label="Email Address" handleChange={handleChange} type="email"/>
-                    <Input name="password" label="Password" handleChange={handleChange} type={showPassword ? "text" : "password"} handleShowPassword={handleShowPassword}/>
-                  </Grid>
-              </form>
-       </Paper>
+  const switchMode = () => {
+    setIsSignUp((prevIsSignup) => !prevIsSignup);
+  };
+
+  const loginSuccess = async(response) => {
+    try{
+      const result = jwtDecode(response?.credential);
+      const token = response.credential;
+      //console.log(response);
+      dispatch({ type: "AUTH", data: { result, token } });
+      navigate("/");
+    }catch(err){
+      console.log(err);
+    }
+  };
+
+  return isLoading ? (
+    <Container className={classes.loading}>
+      <CircularProgress size="5rem" />
     </Container>
-  )
-}
+  ) : (
+    <Container component="main" maxWidth="xs">
+      {showAlert && <div className="alert alert-danger">{message}</div>}
+      <Paper className={classes.paper} elevation={3}>
+        <Avatar className={classes.avatar}>
+          <LockOutlined />
+        </Avatar>
+        <Typography variant="h5">{isSignUp ? "Sign Up" : "Sign In"}</Typography>
+        <form className={classes.form} onSubmit={handleSubmit}>
+          <Grid container spacing={2}>
+            {isSignUp && (
+              <>
+                <Input
+                  name="firstName"
+                  label="First Name"
+                  handleChange={handleChange}
+                  autoFocus
+                  half
+                />
+                <Input
+                  name="lastName"
+                  label="Last Name"
+                  handleChange={handleChange}
+                  half
+                />
+              </>
+            )}
+            <Input
+              name="email"
+              label="Email Address"
+              handleChange={handleChange}
+            />
+            <Input
+              name="password"
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              handleChange={handleChange}
+              handleShowPassword={handleShowPassword}
+            />
+            {isSignUp && (
+              <Input
+                name="confirmPassword"
+                label="Repet Password"
+                handleChange={handleChange}
+                type="password"
+              />
+            )}
+          </Grid>
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            color="primary"
+            className={classes.submit}
+          >
+            {isSignUp ? "Sign Up" : "Sign In"}
+          </Button>
+          <Grid container justifyContent="center">
+            <GoogleLogin
+              onSuccess={loginSuccess}
+              onError={() => {
+                console.log("Login Failed");
+              }}
+              width="100%"
+            />
+          </Grid>
+          <Grid container justifyContent="center">
+            <Grid>
+              <Button onClick={switchMode}>
+                {isSignUp
+                  ? "Already have an account? Sign In"
+                  : "Don't have an account? Sign Up"}
+              </Button>
+            </Grid>
+          </Grid>
+        </form>
+      </Paper>
+    </Container>
+  );
+};
 
-export default Auth
+export default Auth;
